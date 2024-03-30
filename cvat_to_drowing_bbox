@@ -1,0 +1,44 @@
+#cvat xml to image with bounding box
+
+import os
+import cv2
+import xml.etree.ElementTree as ET
+
+def parse_xml(xml_file):
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+    boxes = []
+    for image in root.findall('image'):
+        image_name = image.get('name')
+        img_boxes = []
+        for box in image.findall('box'):
+            xtl = float(box.get('xtl'))
+            ytl = float(box.get('ytl'))
+            xbr = float(box.get('xbr'))
+            ybr = float(box.get('ybr'))
+            label = box.get('label')
+            img_boxes.append((xtl, ytl, xbr, ybr, label))
+        boxes.append((image_name, img_boxes))
+    return boxes
+
+def draw_boxes(image_file, boxes):
+    img = cv2.imread(image_file)
+    for box in boxes:
+        xtl, ytl, xbr, ybr, label = box
+        color = (0, 255, 0) 
+        thickness = 2  
+        img = cv2.rectangle(img, (int(xtl), int(ytl)), (int(xbr), int(ybr)), color, thickness)
+        cv2.putText(img, label, (int(xtl), int(ytl) - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, thickness)
+    return img
+
+xml_files = [file for file in os.listdir() if file.endswith('.xml')]
+
+for xml_file in xml_files:
+    image_boxes = parse_xml(xml_file)
+    for image_name, boxes in image_boxes:
+        image_file = os.path.splitext(image_name)[0] + ".png"
+        if os.path.exists(image_file):
+            annotated_image = draw_boxes(image_file, boxes)
+            annotated_image_name = os.path.splitext(image_name)[0] + "_annotated.png"
+            cv2.imwrite(annotated_image_name, annotated_image)
+            print("saving")
